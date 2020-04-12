@@ -1,10 +1,10 @@
-package tutorial.ch01.sec01.exercises;
+package tutorial.ch01.exercises;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import utils.IntegerReader;
+import tutorial.utils.IntegerReader;
 
 /**
  * Write a program that stores Pascal's triangle up to a given n in an

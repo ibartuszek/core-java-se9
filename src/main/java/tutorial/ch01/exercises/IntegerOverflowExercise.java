@@ -1,4 +1,4 @@
-package tutorial.ch01.sec01.exercises;
+package tutorial.ch01.exercises;
 
 /**
  * What happens when you cast a double to an int that is larger than the

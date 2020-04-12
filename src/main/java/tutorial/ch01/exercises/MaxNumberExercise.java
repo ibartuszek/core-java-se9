@@ -1,6 +1,6 @@
-package tutorial.ch01.sec01.exercises;
+package tutorial.ch01.exercises;
 
-import utils.IntegerReader;
+import tutorial.utils.IntegerReader;
 
 /**
  * Using only the conditional operator, write a program that reads three integers

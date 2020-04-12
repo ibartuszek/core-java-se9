@@ -1,4 +1,4 @@
-package utils;
+package tutorial.utils;
 
 import java.util.Scanner;
 

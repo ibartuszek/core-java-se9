@@ -1,4 +1,4 @@
-package tutorial.ch01.sec01.exercises;
+package tutorial.ch01.exercises;
 
 /**
  * Section 1.5.3, “String Comparison” (page 25) has an example of two strings s

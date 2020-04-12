@@ -1,8 +1,8 @@
-package tutorial.ch01.sec01.exercises;
+package tutorial.ch01.exercises;
 
 import java.util.Arrays;
 
-import utils.IntegerMatrixReader;
+import tutorial.utils.IntegerMatrixReader;
 
 /**
  * Write a program that reads a two-dimensional array of integers and

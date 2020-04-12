@@ -1,4 +1,4 @@
-package tutorial.ch01.sec01.exercises;
+package tutorial.ch01.exercises;
 
 /**
  * Improve the average method so that it is called with at least one parameter

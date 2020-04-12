@@ -1,4 +1,4 @@
-package tutorial.ch01.sec01.exercises;
+package tutorial.ch01.exercises;
 
 /**
  * Write a program that prints the smallest and largest positive double values.

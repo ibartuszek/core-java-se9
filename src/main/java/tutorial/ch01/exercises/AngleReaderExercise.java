@@ -1,6 +1,6 @@
-package tutorial.ch01.sec01.exercises;
+package tutorial.ch01.exercises;
 
-import utils.IntegerReader;
+import tutorial.utils.IntegerReader;
 
 /**
  * Write a program that reads an integer angle (which may be positive or negative)

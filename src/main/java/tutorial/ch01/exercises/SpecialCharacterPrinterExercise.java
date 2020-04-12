@@ -1,4 +1,4 @@
-package tutorial.ch01.sec01.exercises;
+package tutorial.ch01.exercises;
 
 /**
  * Write a program that reads a line of text and prints all characters that are not
