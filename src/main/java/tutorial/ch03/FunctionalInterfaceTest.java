@@ -19,10 +19,30 @@ public class FunctionalInterfaceTest {
         wordList.removeIf(e -> e.equals("longer"));
         wordList.forEach(System.out::println);
         repeat(10, i -> System.out.println("Countdown: " + (9 - i)));
+
+        Arrays.stream(words).map(base -> new TestFunctionalInterface(){
+            @Override
+            public String test(final String base) {
+                return "test + " + base;
+            }
+        }.test(base))
+            .forEach(System.out::println);
+
+        Arrays.stream(words).map(base -> ((TestFunctionalInterface) base1 -> "test + " + base1).test(base))
+            .forEach(System.out::println);
+
+        Arrays.stream(words).map(((TestFunctionalInterface) base1 -> "test + " + base1)::test)
+            .forEach(System.out::println);
     }
 
     public static void repeat(int n, IntConsumer action) {
         for (int i = 0; i < n; i++) action.accept(i);
     }
+
+}
+
+interface TestFunctionalInterface {
+
+    String test(String base);
 
 }
