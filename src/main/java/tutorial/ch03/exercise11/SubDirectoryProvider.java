@@ -56,7 +56,7 @@ public class SubDirectoryProvider {
     }
 
     public static void main(String[] args) {
-        String path = "C:/Projects/core-java-se9/src/main/java/";
+        String path = "src/main/java/";
         List<String> subdirectories = SubDirectoryProvider.of(path, new FilteredFileProvider.WithAnonymousClass()).provide();;
         List<String> subdirectories2 = SubDirectoryProvider.of(path, new FilteredFileProvider.WithLambdaExpression()).provide();;
         List<String> subdirectories3 = SubDirectoryProvider.of(path, new FilteredFileProvider.WithMethodReference()).provide();;

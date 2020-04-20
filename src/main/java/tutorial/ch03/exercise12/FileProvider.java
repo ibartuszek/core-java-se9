@@ -57,7 +57,7 @@ public class FileProvider {
     }
 
     public static void main(String[] args) {
-        String path = "C:/Projects/core-java-se9/src/main/java/";
+        String path = "src/main/java/";
         String extension = ".java";
         List<String> files = FileProvider.of(path, extension).provide();
         System.out.printf("All %s file of:%s \n", extension, path);
