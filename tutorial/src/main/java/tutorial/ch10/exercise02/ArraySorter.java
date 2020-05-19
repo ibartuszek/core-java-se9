@@ -17,7 +17,6 @@ public class ArraySorter {
         int size = 200000;
         int numberOfPrintedElements = 10;
         Measurer measurer = new Measurer();
-        ArraySorter sorter =new ArraySorter();
         int[] firstArray = initArray(size);
         int[] secondArray = Arrays.copyOf(firstArray, firstArray.length);
         printFirstElements(numberOfPrintedElements, firstArray);

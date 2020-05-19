@@ -15,14 +15,12 @@ import java.util.function.Supplier;
  */
 public class CustomCompletableFuture<T> extends CompletableFuture<T> {
 
-    private final Object monitor;
     private Thread currentThread;
     private T customResult;
     private Throwable customThrowable;
 
     private CustomCompletableFuture() {
         super();
-        monitor = new Object();
     }
 
     public static <T> CustomCompletableFuture<T> supplyAsync(final Supplier<T> action, final Executor executor) {

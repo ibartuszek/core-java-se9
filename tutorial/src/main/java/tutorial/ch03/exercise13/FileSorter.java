@@ -24,6 +24,7 @@ public class FileSorter {
 
     public static void main(String[] args) {
         String path = "src/main/java/tutorial/ch01";
+        File file = new File("tutorial/src/main/java/tutorial/ch01");
         List<File> fileList = Arrays.asList(Objects.requireNonNull(new File(path).listFiles()));
         Collections.shuffle(fileList);
         File[] sortedList = new FileSorter()

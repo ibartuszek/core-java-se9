@@ -60,7 +60,7 @@ public class FileProvider {
         String path = "src/main/java/";
         String extension = ".java";
         List<String> files = FileProvider.of(path, extension).provide();
-        System.out.printf("All %s file of:%s \n", extension, path);
+        System.out.printf("All %s file of: %s \n", extension, path);
         files.forEach(System.out::println);
     }
 
