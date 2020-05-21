@@ -3,13 +3,7 @@ package tutorial.ch10.exercise11;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -38,15 +32,31 @@ public class WordFinder {
 
     private void process(final FileListProducer producer, final List<FileFilterConsumer> consumers) throws InterruptedException {
         ExecutorService executorService = Executors.newFixedThreadPool(10);
-        executorService.submit(producer);
-        List<Future<Void>> futures = executorService.invokeAll(consumers);
-        wait(futures);
-        executorService.shutdown();
+        try {
+            executorService.submit(producer);
+            List<Future<Void>> futures = executorService.invokeAll(consumers);
+            //wait(futures);
+
+            List<Boolean> results = futures.stream()
+                    .map(future -> {
+                        try {
+                            future.get(); // This will block until completion
+                            future.get(5, TimeUnit.SECONDS); // Or you can wait with a timeout, that's safer
+                            return true; // I added boolean just to return something :)
+                        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                            return false;
+                        }
+                    })
+                    .collect(Collectors.toList()); // this will ensure all tasks are done and collect the result;
+
+        } finally {
+            executorService.shutdown(); // warranty the release of resource
+        }
     }
 
     private void wait(final List<Future<Void>> futures) throws InterruptedException {
         boolean done = false;
-        while (!done) {
+        while (!done) { // No, this is wrong way of waiting
             done = futures.stream()
                 .filter(future -> !future.isDone())
                 .findAny()

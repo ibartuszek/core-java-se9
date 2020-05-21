@@ -52,6 +52,7 @@ public class WordFinder {
             futures.forEach(f -> f.cancel(true));
             return target;
         });
+
         executorService.shutdown();
         return result.get();
     }
