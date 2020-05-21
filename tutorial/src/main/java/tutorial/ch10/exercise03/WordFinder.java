@@ -43,17 +43,24 @@ public class WordFinder {
         Future<Path> result = executorService.submit(() -> {
             Path target = null;
             for (int index = 0; index < futures.size() && target == null; index++) {
-                Future<Map.Entry<Path, Boolean>> future = futures.get(index);
-                if (future.isDone() && future.get().getValue().equals(true)) {
-                    System.out.println("Found result");
-                    target = future.get().getKey();
+                try {
+                    Future<Map.Entry<Path, Boolean>> future = futures.get(index);
+                    if (future.isDone() && future.get().getValue().equals(true)) {
+                        System.out.println("Found result");
+                        target = future.get().getKey();
+                    }
+                } catch (InterruptedException | ExecutionException e) {
+                    System.out.println("This is the right place for interrupted debug message. Error=" + e.getMessage());
                 }
             }
-            futures.forEach(f -> f.cancel(true));
+            futures.forEach(f -> f.cancel(true)); // you will reach here once after all tasks get completed
             return target;
         });
 
-        executorService.shutdown();
+        // You could do futures.forEach(f -> f.cancel(true)) here as well,
+        // but shutdown of the executorService.shutdown() in the next line will result in similar behavior
+
+        executorService.shutdown(); // This method won't wait for execution to complete by default and will interrupt tasks
         return result.get();
     }
 
@@ -86,7 +93,7 @@ class WordFinderCallable implements Callable<Map.Entry<Path, Boolean>> {
                 System.out.println("False");
             }
         } catch (Exception e) {
-            System.out.println("Interrupted");
+            System.out.println("Interrupted"); // I don't think this will get caused by interruption
         }
         return result;
     }
