@@ -2,7 +2,6 @@ package tutorial.ch10.exercise13;
 
 import java.nio.file.Path;
 import java.util.Map;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 
 import tutorial.ch10.exercise12.FileWordCounter;

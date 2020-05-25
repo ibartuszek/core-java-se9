@@ -3,17 +3,10 @@ package tutorial.ch10.exercise19;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.LongAdder;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import tutorial.ch10.WordFinderUtility;
 import tutorial.ch10.exercise17.AbstractWordCounterWithSharedCounter;
 
 /**
