@@ -31,12 +31,15 @@ public class WordFrequencyProvider {
         this.completionService = new ExecutorCompletionService<>(executorService);
     }
 
+    public void shutdown() {
+        executorService.shutdown();
+    }
+
     public Map<String, Long> provideTopTen(final Path directory) throws InterruptedException, ExecutionException {
         Future<Map<String, Long>> fileProducerFuture =
             completionService.submit(() -> new FileListProducer(fileQueue, directory).run(), Collections.emptyMap());
         submitTasks(fileProducerFuture);
         Map<String, Long> resultMap = getMergedMap();
-        executorService.shutdown();
         return new DictionarySorter().getTopTen(resultMap);
     }
 
@@ -52,8 +55,7 @@ public class WordFrequencyProvider {
     private Map<String, Long> getMergedMap() {
         Map<String, Long> resultMap = new HashMap<>();
         try {
-            for (Future<Map<String, Long>> future = completionService.poll(1000L, TimeUnit.MILLISECONDS); future != null;
-                 future = completionService.poll(1000L, TimeUnit.MILLISECONDS)) {
+            for (Future<Map<String, Long>> future = poll(); future != null; future = poll()) {
                 future.get().forEach((key, value) -> resultMap.merge(key, value, Long::sum));
             }
         } catch (InterruptedException | ExecutionException e) {
@@ -62,8 +64,14 @@ public class WordFrequencyProvider {
         return resultMap;
     }
 
+    private Future<Map<String, Long>> poll() throws InterruptedException {
+        return completionService.poll(1000L, TimeUnit.MILLISECONDS);
+    }
+
     public static void main(String[] args) throws InterruptedException, ExecutionException {
-        System.out.println(new WordFrequencyProvider().provideTopTen(Path.of("src/main/java/tutorial")));
+        WordFrequencyProvider provider = new WordFrequencyProvider();
+        System.out.println(provider.provideTopTen(Path.of("src/main/java/tutorial")));
+        provider.shutdown();
     }
 
 }

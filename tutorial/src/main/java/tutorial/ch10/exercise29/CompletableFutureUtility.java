@@ -23,7 +23,7 @@ import java.util.stream.Stream;
  */
 public class CompletableFutureUtility {
 
-    public static <T> CompletableFuture<T> anyOf(final List<Supplier<T>> actions, final Executor executor) throws ExecutionException, InterruptedException {
+    public static <T> CompletableFuture<T> anyOf(final List<Supplier<T>> actions, final Executor executor) {
         CompletionService<T> completionService = new ExecutorCompletionService<>(executor);
         actions.forEach(action -> completionService.submit(action::get));
         return getCompletableFuture(completionService);

@@ -69,15 +69,8 @@ public class PasswordChecker {
     }
 
     public static void main(String[] args) {
-        CompletableFuture<PasswordAuthentication> repeat = PasswordChecker.repeat(PasswordChecker::provideAuthentication, PasswordChecker::checkAuthentication);
-        while (!repeat.isDone()) {
-            try {
-                Thread.sleep(100L);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-        System.out.println("Welcome!");
+        PasswordAuthentication authentication = PasswordChecker.repeat(PasswordChecker::provideAuthentication, PasswordChecker::checkAuthentication).join();
+        System.out.println("Welcome " + authentication.getUserName() + "!");
     }
 
 }

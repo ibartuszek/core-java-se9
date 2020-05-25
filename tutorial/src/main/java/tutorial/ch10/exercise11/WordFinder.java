@@ -1,6 +1,7 @@
 package tutorial.ch10.exercise11;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -10,8 +11,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 11
@@ -24,39 +24,44 @@ public class WordFinder {
 
     public List<Path> find(final String keyWord, final Path directory) throws InterruptedException {
         BlockingQueue<Map.Entry<Path, Boolean>> queue = new ArrayBlockingQueue<>(1024, true);
-        CopyOnWriteArrayList<Path> resultList = new CopyOnWriteArrayList<>();
-        process(new FileListProducer(queue, directory), createConsumers(keyWord, queue, resultList));
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        submitFileProducer(directory, queue, executorService);
+        CopyOnWriteArrayList<Path> resultList = process(executorService, keyWord, queue);
+        executorService.shutdown();
         return resultList;
     }
 
-    private List<FileFilterConsumer> createConsumers(final String keyWord, final BlockingQueue<Map.Entry<Path, Boolean>> queue,
-        final CopyOnWriteArrayList<Path> resultList) {
-        return Stream.generate(() -> new FileFilterConsumer(queue, keyWord, resultList))
-                .limit(8)
-                .collect(Collectors.toList());
-    }
-
-    private void process(final FileListProducer producer, final List<FileFilterConsumer> consumers) throws InterruptedException {
-        ExecutorService executorService = Executors.newFixedThreadPool(10);
+    private void submitFileProducer(final Path directory, final BlockingQueue<Map.Entry<Path, Boolean>> queue, final ExecutorService executorService) {
+        FileListProducer producer = new FileListProducer(queue, directory);
         executorService.submit(producer);
-        List<Future<Void>> futures = executorService.invokeAll(consumers);
-        wait(futures);
-        executorService.shutdown();
     }
 
-    private void wait(final List<Future<Void>> futures) throws InterruptedException {
-        boolean done = false;
-        while (!done) {
-            done = futures.stream()
-                .filter(future -> !future.isDone())
-                .findAny()
-                .isEmpty();
-            Thread.sleep(10L);
+    private CopyOnWriteArrayList<Path> process(final ExecutorService executorService, final String keyWord,
+        final BlockingQueue<Map.Entry<Path, Boolean>> queue) throws InterruptedException {
+        CopyOnWriteArrayList<Path> resultList = new CopyOnWriteArrayList<>();
+
+        submitTasks(executorService, keyWord, queue, resultList);
+        return resultList;
+    }
+
+    private List<Future<Void>> submitTasks(final ExecutorService executorService, final String keyWord, final BlockingQueue<Map.Entry<Path, Boolean>> queue,
+        final CopyOnWriteArrayList<Path> resultList) throws InterruptedException {
+        List<Future<Void>> futureList = new ArrayList<>();
+        Map.Entry<Path, Boolean> entry = queue.poll(10L, TimeUnit.MILLISECONDS);
+        while (entry == null || !entry.getValue()) {
+            if (entry != null) {
+                futureList.add(executorService.submit(new FileFilterConsumer(keyWord, resultList, entry.getKey())));
+            } else {
+                System.out.println("Producer is waiting...");
+            }
+            entry = queue.poll(10L, TimeUnit.MILLISECONDS);
         }
+        return futureList;
     }
 
     public static void main(String[] args) throws ExecutionException, InterruptedException {
         System.out.println(new WordFinder().find("the", Path.of("src/main/java/tutorial")).size());
+        // System.out.println(new WordFinder().find("the", Path.of("c:/projects")).size());
     }
 
 }

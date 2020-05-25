@@ -1,9 +1,12 @@
 package tutorial.ch10.exercise27;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionService;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.function.Supplier;
 
 /**
@@ -16,7 +19,7 @@ import java.util.function.Supplier;
 public class CustomCompletableFuture<T> extends CompletableFuture<T> {
 
     private Thread currentThread;
-    private T customResult;
+    private Future<T> customResult;
     private Throwable customThrowable;
 
     private CustomCompletableFuture() {
@@ -24,54 +27,32 @@ public class CustomCompletableFuture<T> extends CompletableFuture<T> {
     }
 
     public static <T> CustomCompletableFuture<T> supplyAsync(final Supplier<T> action, final Executor executor) {
-
+        CompletionService<T> completionService = new ExecutorCompletionService<>(executor);
         CustomCompletableFuture<T> result = new CustomCompletableFuture<>();
-
-        executor.execute(() -> {
+        result.customResult = completionService.submit(() -> {
             result.currentThread = Thread.currentThread();
-            try {
-                T temp = action.get();
-                if (!result.currentThread.isInterrupted()) {
-                    result.customResult = temp;
-                }
-            } catch (Exception e) {
-                result.customThrowable = e;
-            }
+            return action.get();
         });
-
         return result;
     }
 
     public boolean cancel() {
-        boolean result = false;
-        if (customResult == null && customThrowable == null) {
-            result = true;
-            currentThread.interrupt();
+        currentThread.interrupt();
+        return true;
+    }
+
+    public T getResult() {
+        T result = null;
+        try {
+            result = customResult.get();
+        } catch (Throwable t) {
+            customThrowable = t;
         }
         return result;
     }
 
-    public T getCustomResult() throws Throwable {
-        waitForExecution();
-        if (customThrowable != null) {
-            throw customThrowable;
-        }
-        return customResult;
-    }
-
     public Throwable getCustomThrowable() {
-        waitForExecution();
         return customThrowable;
-    }
-
-    private void waitForExecution() {
-        while (customResult == null && customThrowable == null) {
-            try {
-                Thread.sleep(100L);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
     }
 
     public static void main(String[] args) throws Throwable {
@@ -79,13 +60,9 @@ public class CustomCompletableFuture<T> extends CompletableFuture<T> {
         CustomCompletableFuture<String> result = CustomCompletableFuture.supplyAsync(CustomCompletableFuture::supplyWord, executor);
         Thread.sleep(500L);
         result.cancel();
-        try {
-            System.out.println(result.getCustomResult());
-        } catch (Throwable t) {
-            t.printStackTrace();
-        }
+        System.out.println("Result: (if exception happened) " + result.getResult());
         result = CustomCompletableFuture.supplyAsync(CustomCompletableFuture::supplyWord, executor);
-        System.out.println(result.getCustomResult());
+        System.out.println("Result: " + result.getResult());
         executor.shutdown();
 
     }

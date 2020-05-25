@@ -3,26 +3,27 @@ package tutorial.ch10.exercise11;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
-import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-public class FileFilterConsumer extends AbstractFileConsumer {
+public class FileFilterConsumer implements Callable<Void> {
 
     private final String keyWord;
     private final CopyOnWriteArrayList<Path> resultList;
+    private final Path file;
 
-    public FileFilterConsumer(final BlockingQueue<Map.Entry<Path, Boolean>> fileQueue, final String keyWord, final CopyOnWriteArrayList<Path> resultList) {
-        super(fileQueue);
+    public FileFilterConsumer(final String keyWord, final CopyOnWriteArrayList<Path> resultList, final Path file) {
         this.keyWord = keyWord;
         this.resultList = resultList;
+        this.file = file;
     }
 
     @Override
-    protected void processFile(final Path file) {
+    public Void call() {
         if (contains(file)) {
             resultList.add(file);
         }
+        return null;
     }
 
     private boolean contains(final Path path) {

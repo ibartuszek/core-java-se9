@@ -1,6 +1,8 @@
 package tutorial.ch10.exercise12;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -10,9 +12,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import tutorial.ch10.exercise11.FileFilterConsumer;
 import tutorial.ch10.exercise11.FileListProducer;
 
 /**
@@ -34,37 +38,54 @@ public class WordFrequencyProvider {
         this.executorService = Executors.newCachedThreadPool();
     }
 
-    public Map<String, Long> provideTopTen(final Path directory) throws InterruptedException, ExecutionException {
-        WordDictionaryMergerCallable mergerCallable = new WordDictionaryMergerCallable(wordDictionary);
-        executorService.submit(() -> new FileListProducer(fileQueue, directory).run());
-        List<Future<Void>> futures = executorService.invokeAll(createConsumers(fileQueue, wordDictionary));
-        Future<Map<String, Long>> resultMapFuture = executorService.submit(mergerCallable);
-        stopMerger(futures, mergerCallable);
-        Map<String, Long> resultMap = new DictionarySorter().getTopTen(resultMapFuture.get());
+    public void shutdown() {
         executorService.shutdown();
-        return resultMap;
     }
 
-    public List<Callable<Void>> createConsumers(final BlockingQueue<Map.Entry<Path, Boolean>> fileQueue,
-        final BlockingQueue<Map<String, Long>> wordDictionary) {
-        return Stream.generate(() -> new FileWordCounterCallable(fileQueue, wordDictionary))
-            .limit(10)
-            .collect(Collectors.toList());
+    public Map<String, Long> provideTopTen(final Path directory) throws InterruptedException, ExecutionException {
+        executorService.submit(() -> new FileListProducer(fileQueue, directory).run());
+        List<Future<Void>> futureList = submitConsumerTasks();
+        Map<String, Long> resultMap = submitMergerTask(futureList);
+        return new DictionarySorter().getTopTen(resultMap);
     }
 
-    private void stopMerger(final List<Future<Void>> futures, final WordDictionaryMergerCallable mergerCallable) {
-        boolean fileConsumersAreDone = false;
-        while (!fileConsumersAreDone) {
-            fileConsumersAreDone = futures.stream()
-                .filter(future -> !future.isDone())
-                .findAny()
-                .isEmpty();
+    private List<Future<Void>> submitConsumerTasks() throws InterruptedException {
+        List<Future<Void>> futureList = new ArrayList<>();
+        Map.Entry<Path, Boolean> entry = fileQueue.poll(10L, TimeUnit.MILLISECONDS);
+        while (entry == null || !entry.getValue()) {
+            if (entry != null) {
+                futureList.add(executorService.submit(new FileWordCounterCallable(wordDictionary, entry.getKey())));
+            } else {
+                System.out.println("Producer is waiting...");
+            }
+            entry = fileQueue.poll(10L, TimeUnit.MILLISECONDS);
         }
-        mergerCallable.finish();
+        return futureList;
+    }
+
+    private Map<String, Long> submitMergerTask(final List<Future<Void>> futureList) throws ExecutionException, InterruptedException {
+        Future<Map<String, Long>> futureMap = executorService.submit(() -> {
+            Map<String, Long> resultMap = new HashMap<>();
+            while(fileConsumersAreStillWorking(futureList) || !wordDictionary.isEmpty()) {
+                Map<String, Long> map = wordDictionary.poll();
+                if (map != null) {
+                    map.forEach((key, value) -> resultMap.merge(key, value, Long::sum));
+                }
+            }
+            return resultMap;
+        });
+        return futureMap.get();
+    }
+
+    private boolean fileConsumersAreStillWorking(final List<Future<Void>> futureList) {
+        return futureList.stream()
+            .anyMatch(future -> !future.isDone());
     }
 
     public static void main(String[] args) throws InterruptedException, ExecutionException {
-        System.out.println(new WordFrequencyProvider().provideTopTen(Path.of("src/main/java/tutorial")));
+        WordFrequencyProvider provider = new WordFrequencyProvider();
+        System.out.println(provider.provideTopTen(Path.of("src/main/java/tutorial")));
+        provider.shutdown();
     }
 
 }
