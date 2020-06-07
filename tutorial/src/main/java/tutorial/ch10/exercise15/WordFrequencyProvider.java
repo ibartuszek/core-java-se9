@@ -1,6 +1,8 @@
 package tutorial.ch10.exercise15;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -33,39 +35,46 @@ public class WordFrequencyProvider {
         this.completionService = new ExecutorCompletionService<>(executorService);
     }
 
-    public Map<String, Long> provideTopTen(final Path directory) throws InterruptedException, ExecutionException {
-        Future<Void> fileProducerFuture = completionService.submit(() -> new FileListProducer(fileQueue, directory).run(), createVoid());
-        submitTasks(fileProducerFuture);
-        waitForMerging();
+    public void shutdown() {
         executorService.shutdown();
-        return new DictionarySorter().getTopTen(worDictionary);
     }
 
+    public Map<String, Long> provideTopTen(final Path directory) throws InterruptedException, ExecutionException {
+        Future<Void> fileProducerFuture = completionService.submit(() -> new FileListProducer(fileQueue, directory).run(), createVoid());
+        List<Future<Void>> futureList = submitTasks(fileProducerFuture);
+        waitForMerging(futureList);
+        return new DictionarySorter().getTopTen(worDictionary);
+    }
     private Void createVoid() {
         return null;
     }
 
-    private void submitTasks(final Future<Void> fileProducerFuture) throws InterruptedException {
+    private List<Future<Void>> submitTasks(final Future<Void> fileProducerFuture) throws InterruptedException {
+        List<Future<Void>> futureList = new ArrayList<>();
         while (!fileProducerFuture.isDone() || !fileQueue.isEmpty()) {
             Path path = fileQueue.poll(10L, TimeUnit.MILLISECONDS);
             if (path != null) {
-                completionService.submit(() -> new FileWordCounterCallable(path, worDictionary).call());
+                futureList.add(completionService.submit(() -> new FileWordCounterCallable(path, worDictionary).call()));
             }
         }
+        return futureList;
     }
 
-    private void waitForMerging() {
-        try {
-            for (Future<Void> future = completionService.poll(1000L, TimeUnit.MILLISECONDS); future != null;
-                 future = completionService.poll(1000L, TimeUnit.MILLISECONDS)) {
+    private void waitForMerging(final List<Future<Void>> futureList) {
+        futureList.forEach(voidFuture -> {
+            try {
+                voidFuture.get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException(e);
             }
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+        });
     }
+
 
     public static void main(String[] args) throws InterruptedException, ExecutionException {
-        System.out.println(new WordFrequencyProvider().provideTopTen(Path.of("src/main/java/tutorial")));
+        WordFrequencyProvider provider = new WordFrequencyProvider();
+        System.out.println(provider.provideTopTen(Path.of("src/main/java/tutorial")));
+        provider.shutdown();
     }
 
 }

@@ -1,7 +1,6 @@
 package tutorial.ch10.exercise15;
 
 import java.nio.file.Path;
-import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 

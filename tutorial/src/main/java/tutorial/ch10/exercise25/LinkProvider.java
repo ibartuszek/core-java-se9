@@ -10,10 +10,9 @@ import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -27,50 +26,27 @@ public class LinkProvider {
     private final String regex = "(https?)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]";
 
     public List<URL> provide(final String target) {
-        CompletableFuture<Stream<URL>> future = getFuture(target);
-        List<URL> resultList = createList(future);
-        waitForFuture(future);
-        return resultList;
-    }
-
-    private CompletableFuture<Stream<URL>> getFuture(final String target) {
         return CompletableFuture.supplyAsync(() -> getContent(target))
-             .thenApply(this::getUrlMatches)
-            .thenApply(stringStream -> stringStream.map(this::convert));
+            .thenApply(this::getUrlMatches)
+            .thenApply(stringStream -> stringStream.map(this::convert))
+            .thenApply(urlStream -> urlStream.collect(Collectors.toList()))
+            .join();
     }
 
     private String getContent(final String target) {
         StringBuilder builder = new StringBuilder();
         try {
-            HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()
                 .uri(new URI(target))
                 .GET()
                 .build();
-            CompletableFuture<HttpResponse<String>> future = client.sendAsync(request, HttpResponse.BodyHandlers.ofString());
-            future.whenComplete((response, throwable) -> {
-                if (throwable == null) {
-                    builder.append(response.body());
-                } else {
-                    throw new RuntimeException(throwable);
-                }
-            });
-            waitForFuture(future);
+            HttpClient.newHttpClient().sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(response -> builder.append(response.body()))
+                .join();
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }
-
         return builder.toString();
-    }
-
-    private void waitForFuture(final Future future) {
-        while (!future.isDone()) {
-            try {
-                Thread.sleep(100L);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
     }
 
     private Stream<String> getUrlMatches(final String content) {
@@ -90,18 +66,6 @@ public class LinkProvider {
             throw new RuntimeException(e);
         }
         return url;
-    }
-
-    private List<URL> createList(final CompletableFuture<Stream<URL>> future) {
-        List<URL> resultList = new CopyOnWriteArrayList<>();
-        future.whenComplete((result, throwable) -> {
-            if (throwable == null) {
-                result.forEach(resultList::add);
-            } else {
-                throw new RuntimeException(throwable);
-            }
-        });
-        return resultList;
     }
 
     public static void main(String[] args) {
